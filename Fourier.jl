@@ -52,37 +52,88 @@ md"""Ejercicio 8"""
 
 # ╔═╡ daffa456-ced7-4199-99bc-1ac3317c86ef
 function serieFourier(f,a,b,N,h=0.01)
-	A = [0 for i in 1:N]
-	B = [0 for i in 1:N]
-	a₀ = integracionTrapC(f,a,b,h)/pi
+	A = [0. for i in 1:N]
+	B = [0. for i in 1:N]
+	a₀ = integracionTrapC(f,a,b,h)*2/(b-a)
 	for k in 1:N 
-		A[k+1] = integracionTrapC(x->f(x)*cos((k+1)*x),a,b,h)/pi
-		B[k] = integracionTrapC(x->f(x)*sin(k*x),a,b,h)/pi
+		A[k] = integracionTrapC(x->f(x)*cos(2π*k*x/(b-a)),a,b,h)*2/(b-a)
+		B[k] = integracionTrapC(x->f(x)*sin(2π*k*x/(b-a)),a,b,h)*2/(b-a)
 	end
-	
 	function F(x)
-		resA=0
+		resA = 0
+		resB = 0
 		for i in 1:N 
-			resA += A[i]*cos(x*i)
-			resB += B[i]*sen(x*i)
+			resA += A[i]*cos(2π*i*x/(b-a))
+			resB += B[i]*sin(2π*i*x/(b-a))
 		end 
 		return a₀/2 + resA + resB
 	end 
 	return F
-end 
+end
 
 # ╔═╡ 6d67a0eb-41f9-436b-8039-c16945cbc181
 md"""Ejercicio 9"""
 
 # ╔═╡ fe63d391-66d8-4239-b755-cf3772d9c734
 begin
-	F = serieFourier(x->x^4,-π,π,100,0.01)
-	plot(x->x^4,-π,π)
-	plot!(F)
+	plot(x->x^4,-2π,2π)
+	f = serieFourier(x->x^4,-2π,2π,100,0.01)
+	plot!(f,-2π,2π)
 end 
 
-# ╔═╡ 509fcc0b-f004-4ee2-96e6-c5850c7d8915
+# ╔═╡ 65423d7e-57e3-4d3a-a1b5-358e754e2407
+md""" Ejercicio 10 """
 
+# ╔═╡ ee6a90e0-764b-450d-abab-0c0981225054
+begin 
+	plot(x->x,-π,π)
+	h = serieFourier(x->x,-2π,2π,100,0.01)
+	plot!(h)
+end 
+
+# ╔═╡ 8b83c514-1c53-479d-9edd-00d1634fe782
+begin 
+	plot(x->x^2,-π,π)
+	u = serieFourier(x->x^2,-π,π,100,0.01)
+	plot!(u)
+end 
+
+# ╔═╡ 4ed94082-4983-43ce-954d-a633c41cdb80
+md""" Ejercicio 11 """ 
+
+# ╔═╡ 071efe24-61b6-4375-99b0-7eecc15ab20f
+function escalon(x)
+	if x >= 0 
+		return 1 
+	else 
+		return 0
+	end
+end 
+
+# ╔═╡ 89c62e05-9389-464c-a102-565e7322b086
+md"""usando la funcion de siempre"""
+
+# ╔═╡ 8a60ee92-ebe2-4303-8fd6-bb0e1db4a54e
+begin 
+	y = serieFourier(escalon,-1,1,100,0.01)
+	plot(escalon,-1,1)
+	plot!(y)
+end 
+
+# ╔═╡ edd04040-a511-4099-9929-ac9437919d7a
+md""" Clase 3 """
+
+# ╔═╡ 04085cb4-9168-4170-b69e-e29d762109a1
+md"""Ejercicio 13"""
+
+# ╔═╡ cb29c68e-4a0b-4b9b-94e0-4feb2caeedb1
+begin 
+	grilla = collect(0:1/8:1)
+	function f1(x)
+		
+		return 
+	end
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1108,6 +1159,15 @@ version = "1.4.1+1"
 # ╠═daffa456-ced7-4199-99bc-1ac3317c86ef
 # ╟─6d67a0eb-41f9-436b-8039-c16945cbc181
 # ╠═fe63d391-66d8-4239-b755-cf3772d9c734
-# ╠═509fcc0b-f004-4ee2-96e6-c5850c7d8915
+# ╟─65423d7e-57e3-4d3a-a1b5-358e754e2407
+# ╠═ee6a90e0-764b-450d-abab-0c0981225054
+# ╠═8b83c514-1c53-479d-9edd-00d1634fe782
+# ╟─4ed94082-4983-43ce-954d-a633c41cdb80
+# ╠═071efe24-61b6-4375-99b0-7eecc15ab20f
+# ╟─89c62e05-9389-464c-a102-565e7322b086
+# ╠═8a60ee92-ebe2-4303-8fd6-bb0e1db4a54e
+# ╟─edd04040-a511-4099-9929-ac9437919d7a
+# ╟─04085cb4-9168-4170-b69e-e29d762109a1
+# ╠═cb29c68e-4a0b-4b9b-94e0-4feb2caeedb1
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
