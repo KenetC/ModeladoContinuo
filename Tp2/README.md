@@ -11,7 +11,7 @@ Pasos a seguir para usar el codigo desde la terminal:
 Podemos usar diferentes matrices de cuantizacion tenemos quant1() y quant2():
 
 Compresion
-* nombre = primer_paso("bolitas.bmp",quant1()) 
+* nombre = primer_paso("ruta/bolitas.bmp",quant1()) 
 
 Descompresion
 * imagen = segundo_paso(nombre)
