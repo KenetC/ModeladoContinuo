@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.32
+# v0.19.36
 
 using Markdown
 using InteractiveUtils
@@ -7,8 +7,8 @@ using InteractiveUtils
 # ╔═╡ 232f7092-7e35-11ee-3548-13d1e42085fa
 using Images, FFTW, StatsBase
 
-# ╔═╡ 4752cb3e-e050-4573-b030-8b8ddc0840ed
-imagen1= load("bolitas.bmp")
+# ╔═╡ d1b53e3e-b2d6-467d-97fa-9b7733d1a658
+md""" ### Preparación"""
 
 # ╔═╡ 1338eb76-a58a-42a7-a429-9b7cfc148164
 function completar_tam_16(im)
@@ -29,65 +29,66 @@ function completar_tam_16(im)
 	end
 end
 
+# ╔═╡ b0dd0e30-d6c3-46b9-b250-733741c3658c
+md""" ### Primera etapa"""
+
 # ╔═╡ 471848d0-0e1a-442d-b2dc-b68e5f0090cc
 function descomponer(im)
-im_16 = completar_tam_16(im)
-imagen1_ycbcr = YCbCr.(im_16)
-imagen1_channelview = channelview(imagen1_ycbcr)
-intensidad = imagen1_channelview[1, :, :]
-cb = imagen1_channelview[2, :, :]
-nueva_im_cb = fill(Float64(0), div(size(cb)[1], 2), div(size(cb)[2], 2)) 
-cr= imagen1_channelview[3, :, :]
-nueva_im_cr= fill(Float64(0), div(size(cr)[1], 2), div(size(cr)[2], 2)) 
-for i in 1:(size(nueva_im_cb)[1])
-	for j in 1:(size(nueva_im_cb)[2])
-		nueva_im_cb[i,j]= (cb[2*i-1, 2*j-1] + cb[2*i, 2*j-1]+ cb[2*i-1, 2*j]+
-								cb[2*i, 2*j])/4
-		nueva_im_cr[i,j]= (cr[2*i-1, 2*j-1] + cr[2*i, 2*j-1]+ cr[2*i-1, 2*j]+
-								cr[2*i, 2*j])/4
-		
+	im_16 = completar_tam_16(im)
+	imagen1_ycbcr = YCbCr.(im_16)
+	imagen1_channelview = channelview(imagen1_ycbcr)
+	y = imagen1_channelview[1, :, :]
+	cb = imagen1_channelview[2, :, :]
+	nueva_im_cb = zeros(Float32, size(cb,1) ÷ 2, size(cb,2)÷2) 
+	cr= imagen1_channelview[3, :, :]
+	nueva_im_cr= zeros(Float32, size(cr,1) ÷ 2, size(cr,2)÷2) 
+	
+	for i in 1:(size(nueva_im_cb)[1])
+		for j in 1:(size(nueva_im_cb)[2])
+			nueva_im_cb[i,j]= (cb[2*i-1, 2*j-1] + cb[2*i, 2*j-1]+ cb[2*i-1, 2*j]+
+									cb[2*i, 2*j])/4
+			nueva_im_cr[i,j]= (cr[2*i-1, 2*j-1] + cr[2*i, 2*j-1]+ cr[2*i-1, 2*j]+
+									cr[2*i, 2*j])/4
+			
+		end
 	end
+	return([y .- 128, nueva_im_cb .- 128, nueva_im_cr .- 128])
 end
-return([intensidad.-(Float64(128)), nueva_im_cb.-(Float64(128)), nueva_im_cr.-(Float64(128))])
-end
-
-# ╔═╡ 81f9e18f-8463-4e9d-ab10-ea0863415bdc
-imagen_descompuesta = descomponer(imagen1)
 
 # ╔═╡ f065f737-0392-470e-aa5d-39353627dc11
 function descomponer_inversa(im)
-a=im[1]
-b=im[2]
-c=im[3]
-nueva_im_b = fill(Float64(0), size(b)[1]*2, size(b)[2]*2)
-nueva_im_c = fill(Float64(0), size(b)[1]*2, size(b)[2]*2)
+	y = im[1]
+	cb = im[2]
+	cr = im[3]
+	nueva_im_cb = zeros(Float32, size(cb,1)*2, size(cb,2)*2)
+	nueva_im_cr = zeros(Float32, size(cb,1)*2, size(cb,2)*2)
+	
+	for i in 1:size(cb,1)
+	for j in 1:size(cb,2)
+		nueva_im_cb[2*i-1,2*j-1]= cb[i, j]+ 128
+		nueva_im_cb[2*i-1,2*j]= cb[i, j] + 128
+		nueva_im_cb[2*i,2*j-1]= cb[i, j] + 128
+		nueva_im_cb[2*i,2*j]= cb[i, j] +128
+		
+		nueva_im_cr[2*i-1,2*j-1]= cr[i, j]+128
+		nueva_im_cr[2*i-1,2*j]= cr[i, j]+128
+		nueva_im_cr[2*i,2*j-1]= cr[i, j]+128
+		nueva_im_cr[2*i,2*j]= cr[i, j]+128
+	end
+	end
+	nueva_im_y = y .+ 128
+	nueva = zeros(Float32, 3, size(nueva_im_y,1), size(nueva_im_y,2))
+	
+	nueva[1,:, :] = nueva_im_y
+	nueva[2,:, :] = nueva_im_cb
+	nueva[3,:, :] = nueva_im_cr
 
-for i in 1:(size(b)[1])
-for j in 1:(size(b)[2])
-	nueva_im_b[2*i-1,2*j-1]= b[i, j]+Float64(128)
-	nueva_im_b[2*i-1,2*j]= b[i, j]+Float64(128)
-	nueva_im_b[2*i,2*j-1]= b[i, j]+Float64(128)
-	nueva_im_b[2*i,2*j]= b[i, j]+Float64(128)
-	nueva_im_c[2*i-1,2*j-1]= c[i, j]+Float64(128)
-	nueva_im_c[2*i-1,2*j]= c[i, j]+Float64(128)
-	nueva_im_c[2*i,2*j-1]= c[i, j]+Float64(128)
-	nueva_im_c[2*i,2*j]= c[i, j]+Float64(128)
+	res = RGB.(colorview(YCbCr, nueva))
+	return res
 end
-end
-nueva_im_a=a.+Float64(128)
-nueva= fill(Float64(0), 3, size(nueva_im_a)[1], size(nueva_im_a)[2])
-nueva[1,:, :]=nueva_im_a
-nueva[2,:, :]=nueva_im_b
-nueva[3,:, :]=nueva_im_c
-res=colorview(YCbCr, nueva)
-return res
-end
-
-# ╔═╡ f0f5ecc6-dd27-471c-abad-8f5df1b6ee95
-imagen_compuesta = descomponer_inversa(imagen_descompuesta)
 
 # ╔═╡ 5540d711-3295-442c-ba17-706ca1ed1848
-md""" Transformada por bloques"""
+md""" ### Transformada por bloques"""
 
 # ╔═╡ 4d96c454-fbfe-4500-80b4-97e8a9df671a
 begin
@@ -113,199 +114,232 @@ begin
 		transformada_8x8(im[2])
 		transformada_8x8(im[3])
 	end
-	function inversa_transformada_por_bloques!(im)
-		inversa_transformada_8x8!(im[1])
-		inversa_transformada_8x8!(im[2])
-		inversa_transformada_8x8!(im[3])
+	function inversa_transformada_por_bloques(im)
+		inversa_transformada_8x8(im[1])
+		inversa_transformada_8x8(im[2])
+		inversa_transformada_8x8(im[3])
 	end
 end
 
 # ╔═╡ c8f89fe3-02df-45b3-a56d-2bb651b83901
-md""" Cuantizacion """
+md""" ### Cuantización """
+
+# ╔═╡ 83f8dffc-d52a-4b10-ad65-ad94c299ec4f
+md""" Matrices de cuantizacion que podemos usar:  """
+
+# ╔═╡ c5791856-404a-4d65-8a1c-bcd97a3e305e
+md""" 
+La primera matriz conserva mejor la calidad de la imagen, la segunda baja mas la calidad, pues hace que perdamos precision en los valores en la compresion esto es producto del redondeo, cuando dividimos casillero a casillero los valores de la matriz de la imagen, con estas matrices.
+"""
+
+# ╔═╡ abb822c7-4abf-4cdf-98dd-cc51e90282e1
+begin 
+function quant1()
+	return convert(Matrix{UInt8},[16 11 10 16 24 40 51 61;
+	12 12 14 19 26 58 60 55;
+	14 13 16 24 40 57 69 56;
+	14 17 22 29 51 87 80 62;
+	18 22 37 56 68 109 103 77;
+	24 35 55 64 81 104 113 92;
+	49 64 78 87 103 121 120 101;
+	72 92 95 98 112 100 103 99])
+end
+function quant2()
+	return convert(Matrix{UInt8},[ 80  60  50  80  120 200 255 255;
+	55  60  70  95  130 255 255 255;
+	70  65  80  120 200 255 255 255;
+	70  85  110 145 255 255 255 255;
+	90  110 185 255 255 255 255 255;
+	120 175 255 255 255 255 255 255;
+	245 255 255 255 255 255 255 255;
+	255 255 255 255 255 255 255 255])
+end
+end 
 
 # ╔═╡ 6e32d7ab-ba46-4a4e-8ed1-a8f0d1a635e8
 begin 
-	quant=[16 11 10 16 24 40 51 61;
-			12 12 14 19 26 58 60 55;
-			14 13 16 24 40 57 69 56;
-			14 17 22 29 51 87 80 62;
-			18 22 37 56 68 109 103 77;
-			24 35 55 64 81 104 113 92;
-			49 64 78 87 103 121 120 101;
-			72 92 95 98 112 100 103 99]
-	# Deberia devolver las tres matrices con UInt 
-	function cuantizar_dct(im, m_quant=quant::Matrix{Int})
-		im_descompuesta = descomponer(im)
-		#println(im_descompuesta[1])
-		transformada_por_bloques(im_descompuesta)
-		#println(im_descompuesta[1])
-		for i in 1:div(size(im)[1], 8) 
-		for j in 1:div(size(im)[2], 8)
-			vista = view(im_descompuesta[1], 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
-			# quiero que se haga por "referencia" la funcion round, no lo probe 
-			vista = round.(Int,vista ./ m_quant)
-		end
-		end
-		for i in 1:div(size(im_descompuesta[2])[1], 8) 
-		for j in 1:div(size(im_descompuesta[2])[2], 8)
-			# quiero que se haga por "referencia" la funcion round, no lo probe 
-			vista = view(im_descompuesta[2], 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
-			vista = round.(Int,vista ./ m_quant)
-			vista = view(im_descompuesta[3], 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
-			vista = round.(Int,vista ./ m_quant)
-		end
-		end
-		return im_descompuesta
+function cuantizar(M,quant::Matrix{UInt8})
+	n,m = size(M)
+	for i in 1:n÷8 
+	for j in 1:m÷8
+		vista0 = view(M, 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
+		vista0 .= round.(vista0 ./ quant, digits=0)
 	end
-
-	
-	function inv_cuantizar_dct(im, m_quant::Matrix{Int})
-		for i in 1:div(size(im)[1], 8) 
-		for j in 1:div(size(im)[2], 8)
-			vista = view(im[1], 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
-			round.(vista .* m_quant)
-		end
-		end
-		for i in 1:div(size(im[2])[1], 8) 
-		for j in 1:div(size(im[2])[2], 8)
-			vista1 = view(im[2], 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
-			round.(vista1 .* m_quant)
-			vista2 = view(im[3], 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
-			round.(vista2 .* m_quant)
-		end
-		end
-		return im
 	end
+	return convert(Matrix{Int8},M)
+end
+function inv_cuantizar(M,quant::Matrix{UInt8})
+	n,m = size(M)
+	for i in 1:n÷8 
+	for j in 1:m÷8
+		vista = view(M, 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
+		vista .= vista .* quant
+	end
+	end
+end
 end 
 
-# ╔═╡ 11938dac-e27e-416c-ad79-9def4010774b
-begin 
-	M = []
-	push!(M,[1.123 2.5 3.5 ; 1. 2. 3. ; 1. 2. 3.])
-	push!(M,fill(float64(1),3,3))
-	println(M)
-	M[1] = round.(Int, M[1])
-	#M[2] = round.(Int, M[2])
-	println(M)
-end
-
-# ╔═╡ 36a57a80-3200-48a4-b406-5dce062d65d7
-
-
-# ╔═╡ 922ac8b2-5bb7-4520-aa5b-d8fe353fab3b
-# ╠═╡ disabled = true
-#=╠═╡
-begin
-	#imdes = cuantizar_dct(imagen1)
-	#Intensidad = round.(Int,imdes[1])
-	#print(Intensidad)
-	
-end
-  ╠═╡ =#
-
 # ╔═╡ e198647a-508d-4691-ac23-de8e1e68a745
-md""" Compresion """
+md""" ### Compresión """
 
 # ╔═╡ 0da373e1-bddf-4fb4-b7fa-825fe0cc584c
 begin 
-	#ordenamiento zigzag
-	orden_zigzag = []
+	function orden_zigzag()
+	res = fill([UInt8(0),UInt8(0)],64)
 	n = 8
+	iterator = 1 
 	for k in 2:(n + n - 1)
 		if k % 2 == 0
 			for i in max(1, k - n):min(k - 1, n)
-				push!(orden_zigzag,[k - i,i])
+				res[iterator] = [UInt8(k - i),UInt8(i)]
+				iterator = iterator + 1 
 			end
 		else
 			for i in max(1, k - n):min(k - 1, n)
-				push!(orden_zigzag,[i, k - i])
+				res[iterator] = [UInt8(i),UInt8(k-i)]
+				iterator = iterator + 1
 			end
 		end
 	end
-	push!(orden_zigzag,[8,8])
-	
-	
-	function compresion_bloques_8x8(m)
-		vect = []
-		for indexs in orden_zigzag
-			push!(vect,m[indexs[1],indexs[2]])
-		end
-	    return rle(vect)
-	end 
+	res[iterator] = [UInt8(8),UInt8(8)]
+	return res
+end
 
-	function compresion_matriz(M)
-		res = []
-		for i in 1:div(size(M)[1], 8) 
-		for j in 1:div(size(M)[2], 8)
-			vista = view(M, 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
-			# [valyreps1,valyreps2,....]
-			vals, reps = compresion_bloques_8x8(vista)
-			v = vcat(vals,reps)
-			res = vcat(res,v)
-			# No tenemos control del tamanio de estos Arrays!!
+function compresion_matriz(M)
+	n,m = size(M)
+	res = zeros(Int8,n*m)
+	orden_zigzag1 = orden_zigzag()
+	ind = 1
+	size_total = 1
+	for i in 1:n÷8
+	for j in 1:m÷8
+		vista = view(M, 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
+		vect = zeros(Int8,64)
+		for i in 1:64
+			vect[i] = vista[orden_zigzag1[i][1],orden_zigzag1[i][2]]
 		end
-		end
-		return res
-	end 
 	
-	function inversa_compresion_8x8(M,V)
-		for i in 1:64 
-			M[orden_zigzag[i][1],orden_zigzag[i][2]] = V[i]
-		end
-	end 
-	# necesitamos saber las dimensiones de los bloques de 8x8, filas y columnas
-	function inversa_compresion(A,bloques_fils,bloques_cols)
-		M = zeros(N*8,M*8)
-		# sabemos que size(A) = N*M bloques de filas y columnas
-		i = 1 
-		j = 1
-		for ind in size(A)
-			if ind % bloques_cols == 0
-				i += 1 
-				j = 1 
-				vista = view(M, 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
-				V = inverse_rle(A[ind][1],A[ind][2])
-				inversa_compresion_8x8(vista,V)
-			else 
-				j += 1
-				vista = view(M, 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
-				V = inverse_rle(A[ind][1],A[ind][2])	
-				inversa_compresion_8x8(vista,V)
-			end
-		end
-		return M
+		vals, reps = rle(vect)
+		v = vcat(reps,vals)
+		
+		res[ind:size(v,1)+ind-1] = v
+		
+		size_total = size_total + size(v,1)
+		ind = ind + size(v,1)  
 	end
+	end
+	return res[1:size_total-1]
 end 
 
-# ╔═╡ 5b28f474-5c99-4349-bf7c-306865779a89
-O = [
-    1 2 3 4 1 2 3 4;
-    2 3 7 8 5 6 7 8;
-    3 2 3 4 1 2 3 4;
-    5 6 7 8 5 6 7 8;
-    1 2 3 4 1 2 3 4;
-    5 6 7 8 5 6 7 8;
-    1 2 3 4 1 2 3 4;
-    5 6 7 8 5 6 7 8
-]
-
-# ╔═╡ 3a3a875f-44ec-48c3-ae26-a1434252cd75
-begin 
-	compresion_bloques_8x8(O)
+function inversa_compresion(A,bloques_fils,bloques_cols)
+	M = zeros(bloques_fils*8,bloques_cols*8)
+	orden_zigzag1 = orden_zigzag()
+	i = 1
+	j = 1
+	for ind in 1:size(A,1)
+		if ind % bloques_cols == 0 
+			vista = view(M, 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
+			V = inverse_rle(A[ind][1],A[ind][2])
+			for i in 1:64 
+				vista[orden_zigzag1[i][1],orden_zigzag1[i][2]] = V[i]
+			end
+			i += 1
+			j = 1
+			#println((i,j))
+		else 
+			vista = view(M, 8*(i-1)+1:8*i, 8*(j-1)+1:8*j)
+			V = inverse_rle(A[ind][1],A[ind][2])	
+			for i in 1:64 
+				vista[orden_zigzag1[i][1],orden_zigzag1[i][2]] = V[i]
+			end
+			
+			#println(vista)
+			j += 1
+			#println((i,j))
+		end
+	end
+	return M
+end
 end 
 
 # ╔═╡ b44e45f0-6459-4835-8c99-0c8992555dd8
-md""" Guardado """ 
+md"""### Guardado y Lectura """ 
 
 # ╔═╡ 2867346e-3d11-4206-9363-f7568c9f7404
 begin 
-	#guardar los 3 arrays de la img con #bloquesFilas y #bloquesColumnas 
-	function guardar_M(M,n,m)
-		io = open("Array.ext","w")
-		#tipo Int16
+	function leer_matriz(bloq_cols,bloq_fils,io)
+	i = 1 
+	j = 1 
+	termino = false
+	suma_parcial = 0 
+	s = 0 
+	reps = zeros(Int8,0)
+	vals = zeros(Int8,0)
+	A = []
+	while(!termino)
+		if suma_parcial == 64 
+			while s != 0 
+				val = read(io,Int8)
+				push!(vals,val)
+				s -= 1
+			end
+			suma_parcial = 0 
+			
+			push!(A,[vals,reps])
+			reps = zeros(Int8,0)
+			vals = zeros(Int8,0)
+			if(j == bloq_cols && i < bloq_fils)
+				j = 1
+				i += 1
+			elseif(j == bloq_cols && i == bloq_fils)
+				termino = true
+			else
+				j += 1 
+			end 
+		else 
+			rep = read(io,Int8)
+			
+			suma_parcial += rep 
+			push!(reps,rep)
+			s += 1
+		end
+	end
+		return A 
+	end
+	function leer_EXT(nombre::String)
+		io = open(nombre*".ext", "r")
+		n = read(io, UInt16)
+		m = read(io, UInt16)
+		quant = zeros(UInt8,8,8)
+		for i in 1:8
+		for j in 1:8
+			quant[i,j] = read(io,UInt8)
+		end
+		end
+		
+		bloq_fils = n ÷ 8
+		bloq_cols = m ÷ 8
+		bloq_cols2 = bloq_cols ÷ 2
+		bloq_fils2 = bloq_fils ÷ 2
+		
+		A = leer_matriz(bloq_cols,bloq_fils,io)
+		M1 = inversa_compresion(A,bloq_fils,bloq_cols)
+		B = leer_matriz(bloq_cols2,bloq_fils2,io)		
+		M2 = inversa_compresion(B,bloq_fils2,bloq_cols2)
+		C = leer_matriz(bloq_cols2,bloq_fils2,io)		
+		M3 = inversa_compresion(C,bloq_fils2,bloq_cols2)
+		close(io)
+		return quant,[M1,M2,M3]
+	end
+	function guardar_en_EXT(M,n,m,nombre,quant::Matrix{UInt8})
+		io = open(nombre*".ext","w")
 		write(io,n)
 		write(io,m)
-		#tipo UInt
+		for i in 1:8
+		for j in 1:8
+			write(io,quant[i,j])
+		end
+		end
 		for a in M[1]
 			write(io,a)
 		end		
@@ -317,98 +351,64 @@ begin
 		end
 		close(io)
 	end
-	function leer_M(nombre = "Array.ext" ::String)
-		#Solo es una Prueba, no esta bien implementado  
-		io = open(nombre, "r")
-		m = read(io, UInt)
-		close(io)
-		lineas = split(contenido,'\n')
-		luminosidad = parse.(Int, split(lineas[1]))
-		
-		cb = parse.(Int, split(lineas[2]))
-		cr = parse.(Int, split(lineas[3]))
-		return luminosidad
-	end
 end
 
 # ╔═╡ 47906cab-9184-4af2-81c2-2951524c03ae
-md"""Ejemplo de guardado y lectura, 
-dependiendo que tipo guardamos, vamos a leerlode una forma u otra, si es un int que no sabemos nada al respecto sera Int, pero para los arrays luego de la compresion son UInt """ 
+md""" pasos finales, juntamos todos: """ 
 
-# ╔═╡ da798b8b-4e07-43b9-bd58-e3b79eb67360
+# ╔═╡ 3ca25098-b5e9-4196-8986-b09b14165aa2
 begin 
-	io = open("Array.ext","w")
-	B = [1,2,3,255]
-	write(io,1919191)
-	write(io,4)
-	for a in B
-		write(io,a)
-	end		
-	close(io)
-end
-
-# ╔═╡ 6e1ba806-2e5d-4ede-b34d-e6fe1132b8d3
-begin 
-	io2 = open("Array.ext", "r")
-	t = read(io2,Int)
-	o = read(io2,Int)
-	#println(t)
-	#println(o)
-	for i in 1:o
-		println(read(io2,UInt))
+	function primer_paso(path_img,quant::Matrix{UInt8})
+		img = load(path_img)
+		img_descomp = descomponer(img)
+		#println("Descomponer: ")
+		#println(img_descomp[1])
+		#println(img_descomp[2])
+		#println(img_descomp[3])
+		
+		#Transformamos
+		transformada(img_descomp[1])
+		transformada(img_descomp[2])
+		transformada(img_descomp[3])
+	
+		#println("transformada: ")
+		#println(img_descomp[1])
+		#println(img_descomp[2])
+		
+		img_cuantizada1 = cuantizar(img_descomp[1],quant)
+		img_cuantizada2 = cuantizar(img_descomp[2],quant)
+		img_cuantizada3 = cuantizar(img_descomp[3],quant)
+		#println("Cuantizar: ")
+		#println(img_cuantizada1)
+		n,m = size(img_cuantizada1)
+	
+		y = compresion_matriz(img_cuantizada1)
+		cb = compresion_matriz(img_cuantizada2)
+		cr = compresion_matriz(img_cuantizada3)
+		#println("Compresion: ")
+		#println(y)
+		
+		nombre = path_img[begin:end-4]
+		guardar_en_EXT([y,cb,cr],convert(UInt16,n),convert(UInt16,m),nombre,quant)
+		return nombre
 	end
-	close(io2)
-end
-
-# ╔═╡ 2ec07496-929c-4d7a-8b2e-773348232899
-md""" Juntamos todo """ 
-
-# ╔═╡ d3a2a4c0-7cc9-4b13-a3dd-21db8ce2b847
-begin 
-	function Primer_Paso(img)
-		img_descomp = cuantizar_dct(img)
-		#Arrays compimidos
-		luminosidad = compresion_matriz(img_descomp[1])
-		cb = compresion_matriz(img_descomp[2])
-		cr = compresion_matriz(img_descomp[3])
-		#obtenemos #bloquesFIlas y #BloquesColumnas ambos de 8x8
-		#M = div(size(img_descomp[1])[1],8)
-		#N = div(size(img_descomp[1])[2],8)
-		guardar_M([luminosidad,cb,cr],1,1)
+	function segundo_paso(nombre)
+		# nos devuelve array de 3 matrices, intensidad, cb y cr 
+		quant,M = leer_EXT(nombre)
+		# inversa de cuantizacion 
+		inv_cuantizar(M[1],quant)
+		inv_cuantizar(M[2],quant)
+		inv_cuantizar(M[3],quant)
+	
+		#INVERSA DE TRANSFORMADA 	
+		inversa_transformada(M[1])
+		inversa_transformada(M[2])
+		inversa_transformada(M[3])
+	
+		img = descomponer_inversa(M)
+		#println(typeof(img))
+		return img
 	end
-end
-
-# ╔═╡ b3f15669-3a11-43a3-8033-0d720f07c8f1
-# ╠═╡ skip_as_script = true
-#=╠═╡
-begin 
-	Primer_Paso(imagen1)
-end 
-  ╠═╡ =#
-
-# ╔═╡ 00c55a70-1e10-4dcf-a937-20cb0afd77a2
-begin 
-	# Crear una matriz de ejemplo
-matriz_ejemplo = [1.0 2.0 3.0; 4.0 5.0 6.0; 7.0 8.0 9.0]
-
-# Calcular la DCT en la matriz de ejemplo
-dct_resultado = dct(matriz_ejemplo)
-
-println("Matriz Original:")
-println(matriz_ejemplo)
-println("\nResultado de la DCT:")
-println(dct_resultado)
-idct_resultado = idct(dct_resultado)
-
-println("Resultado de la IDCT:")
-println(idct_resultado)
-end
-
-# ╔═╡ b4236736-e0c8-44da-a450-fb27d6cbdbc8
-begin 
-	A = [0.999 2.4 2.323 ;1.234 2.234 23.232; .235 .343 3.3542 ]
-	m_quant = 2*ones(Int,3,3)
-	print(round.(A ./ m_quant))
 end 
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -428,23 +428,37 @@ StatsBase = "~0.34.2"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.7.2"
+julia_version = "1.10.0"
 manifest_format = "2.0"
+project_hash = "abe0764e24be74449f91257141a5930703818e34"
 
 [[deps.AbstractFFTs]]
-deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
+deps = ["LinearAlgebra"]
 git-tree-sha1 = "d92ad398961a3ed262d8bf04a1a2b8340f915fef"
 uuid = "621f4979-c628-5d54-868e-fcf4e3e8185c"
 version = "1.5.0"
 
+    [deps.AbstractFFTs.extensions]
+    AbstractFFTsChainRulesCoreExt = "ChainRulesCore"
+    AbstractFFTsTestExt = "Test"
+
+    [deps.AbstractFFTs.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
-git-tree-sha1 = "02f731463748db57cc2ebfbd9fbc9ce8280d3433"
+git-tree-sha1 = "76289dc51920fdc6e0013c872ba9551d54961c24"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "3.7.1"
+version = "3.6.2"
+weakdeps = ["StaticArrays"]
+
+    [deps.Adapt.extensions]
+    AdaptStaticArraysExt = "StaticArrays"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
+version = "1.1.1"
 
 [[deps.ArnoldiMethod]]
 deps = ["LinearAlgebra", "Random", "StaticArrays"]
@@ -454,9 +468,31 @@ version = "0.2.0"
 
 [[deps.ArrayInterface]]
 deps = ["Adapt", "LinearAlgebra", "Requires", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "16267cf279190ca7c1b30d020758ced95db89cd0"
+git-tree-sha1 = "f83ec24f76d4c8f525099b2ac475fc098138ec31"
 uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
-version = "7.5.1"
+version = "7.4.11"
+
+    [deps.ArrayInterface.extensions]
+    ArrayInterfaceBandedMatricesExt = "BandedMatrices"
+    ArrayInterfaceBlockBandedMatricesExt = "BlockBandedMatrices"
+    ArrayInterfaceCUDAExt = "CUDA"
+    ArrayInterfaceGPUArraysCoreExt = "GPUArraysCore"
+    ArrayInterfaceStaticArraysCoreExt = "StaticArraysCore"
+    ArrayInterfaceTrackerExt = "Tracker"
+
+    [deps.ArrayInterface.weakdeps]
+    BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
+    BlockBandedMatrices = "ffab5731-97b5-5995-9138-79e8c1846df0"
+    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+    GPUArraysCore = "46192b85-c4d5-4398-a991-12ede77f4527"
+    StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
+    Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
+
+[[deps.ArrayInterfaceCore]]
+deps = ["LinearAlgebra", "SnoopPrecompile", "SparseArrays", "SuiteSparse"]
+git-tree-sha1 = "e5f08b5689b1aad068e01751889f2f615c7db36d"
+uuid = "30b0a656-2188-435a-8636-2ec0e6a096e2"
+version = "0.1.29"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -500,16 +536,14 @@ uuid = "aafaddc9-749c-510e-ac4f-586e18779b91"
 version = "0.2.2"
 
 [[deps.ChainRulesCore]]
-deps = ["Compat", "LinearAlgebra", "SparseArrays"]
+deps = ["Compat", "LinearAlgebra"]
 git-tree-sha1 = "e0af648f0692ec1691b5d094b8724ba1346281cf"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 version = "1.18.0"
+weakdeps = ["SparseArrays"]
 
-[[deps.ChangesOfVariables]]
-deps = ["InverseFunctions", "LinearAlgebra", "Test"]
-git-tree-sha1 = "2fba81a302a7be671aefe194f0525ef231104e7f"
-uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
-version = "0.1.8"
+    [deps.ChainRulesCore.extensions]
+    ChainRulesCoreSparseArraysExt = "SparseArrays"
 
 [[deps.CloseOpenIntervals]]
 deps = ["Static", "StaticArrayInterface"]
@@ -541,27 +575,32 @@ git-tree-sha1 = "a1f44953f2382ebb937d60dafbe2deea4bd23249"
 uuid = "c3611d14-8923-5661-9e6a-0046d554d3a4"
 version = "0.10.0"
 
+    [deps.ColorVectorSpace.extensions]
+    SpecialFunctionsExt = "SpecialFunctions"
+
+    [deps.ColorVectorSpace.weakdeps]
+    SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
 git-tree-sha1 = "fc08e5930ee9a4e03f84bfb5211cb54e7769758a"
 uuid = "5ae59095-9a9b-59fe-a467-6f913c188581"
 version = "0.12.10"
 
-[[deps.CommonSubexpressions]]
-deps = ["MacroTools", "Test"]
-git-tree-sha1 = "7b8a93dba8af7e3b42fecabf646260105ac373f7"
-uuid = "bbf7d656-a473-5ed7-a52c-81e309532950"
-version = "0.3.0"
-
 [[deps.Compat]]
-deps = ["Dates", "LinearAlgebra", "UUIDs"]
+deps = ["UUIDs"]
 git-tree-sha1 = "8a62af3e248a8c4bad6b32cbbe663ae02275e32c"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
 version = "4.10.0"
+weakdeps = ["Dates", "LinearAlgebra"]
+
+    [deps.Compat.extensions]
+    CompatLinearAlgebraExt = "LinearAlgebra"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
+version = "1.0.5+1"
 
 [[deps.ComputationalResources]]
 git-tree-sha1 = "52cb3ec90e8a8bea0e62e275ba577ad0f74821f7"
@@ -600,23 +639,16 @@ version = "0.18.15"
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
-[[deps.DiffResults]]
-deps = ["StaticArraysCore"]
-git-tree-sha1 = "782dd5f4561f5d267313f23853baaaa4c52ea621"
-uuid = "163ba53b-c6d8-5494-b064-1a9d43ac40c5"
-version = "1.1.0"
-
-[[deps.DiffRules]]
-deps = ["IrrationalConstants", "LogExpFunctions", "NaNMath", "Random", "SpecialFunctions"]
-git-tree-sha1 = "23163d55f885173722d1e4cf0f6110cdbaf7e272"
-uuid = "b552c78f-8df3-52c6-915a-8e097449b14b"
-version = "1.15.1"
-
 [[deps.Distances]]
-deps = ["LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI"]
+deps = ["LinearAlgebra", "Statistics", "StatsAPI"]
 git-tree-sha1 = "5225c965635d8c21168e32a12954675e7bea1151"
 uuid = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 version = "0.10.10"
+weakdeps = ["ChainRulesCore", "SparseArrays"]
+
+    [deps.Distances.extensions]
+    DistancesChainRulesCoreExt = "ChainRulesCore"
+    DistancesSparseArraysExt = "SparseArrays"
 
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
@@ -629,8 +661,9 @@ uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 version = "0.9.3"
 
 [[deps.Downloads]]
-deps = ["ArgTools", "LibCURL", "NetworkOptions"]
+deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+version = "1.6.0"
 
 [[deps.FFTViews]]
 deps = ["CustomUnitRanges", "FFTW"]
@@ -656,17 +689,14 @@ git-tree-sha1 = "299dc33549f68299137e51e6d49a13b5b1da9673"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 version = "1.16.1"
 
+[[deps.FileWatching]]
+uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
+
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
 git-tree-sha1 = "335bfdceacc84c5cdf16aadc768aa5ddfc5383cc"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
 version = "0.8.4"
-
-[[deps.ForwardDiff]]
-deps = ["CommonSubexpressions", "DiffResults", "DiffRules", "LinearAlgebra", "LogExpFunctions", "NaNMath", "Preferences", "Printf", "Random", "SpecialFunctions", "StaticArrays"]
-git-tree-sha1 = "cf0fe81336da9fb90944683b8c41984b08793dad"
-uuid = "f6369f11-7733-5829-9624-2563aa707210"
-version = "0.10.36"
 
 [[deps.Graphics]]
 deps = ["Colors", "LinearAlgebra", "NaNMath"]
@@ -844,16 +874,14 @@ uuid = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 version = "0.14.7"
 
 [[deps.IntervalSets]]
-deps = ["Dates", "Random", "Statistics"]
-git-tree-sha1 = "3d8866c029dd6b16e69e0d4a939c4dfcb98fac47"
+deps = ["Dates", "Random"]
+git-tree-sha1 = "8e59ea773deee525c99a8018409f64f19fb719e6"
 uuid = "8197267c-284f-5f27-9208-e0e47529a953"
-version = "0.7.8"
+version = "0.7.7"
+weakdeps = ["Statistics"]
 
-[[deps.InverseFunctions]]
-deps = ["Test"]
-git-tree-sha1 = "68772f49f54b479fa88ace904f6127f0a3bb2e46"
-uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.12"
+    [deps.IntervalSets.extensions]
+    IntervalSetsStatisticsExt = "Statistics"
 
 [[deps.IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
@@ -866,10 +894,10 @@ uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 version = "1.4.0"
 
 [[deps.JLD2]]
-deps = ["FileIO", "MacroTools", "Mmap", "OrderedCollections", "Pkg", "PrecompileTools", "Printf", "Reexport", "Requires", "TranscodingStreams", "UUIDs"]
-git-tree-sha1 = "9bbb5130d3b4fa52846546bca4791ecbdfb52730"
+deps = ["FileIO", "MacroTools", "Mmap", "OrderedCollections", "Pkg", "Printf", "Reexport", "Requires", "TranscodingStreams", "UUIDs"]
+git-tree-sha1 = "572d024660119ee626938419c14db0db5f3f3283"
 uuid = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
-version = "0.4.38"
+version = "0.4.36"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
@@ -897,9 +925,9 @@ version = "3.0.0+1"
 
 [[deps.LayoutPointers]]
 deps = ["ArrayInterface", "LinearAlgebra", "ManualMemory", "SIMDTypes", "Static", "StaticArrayInterface"]
-git-tree-sha1 = "62edfee3211981241b57ff1cedf4d74d79519277"
+git-tree-sha1 = "88b8f66b604da079a627b6fb2860d3704a6729a1"
 uuid = "10f19ff3-798f-405d-979b-55457f8fc047"
-version = "0.1.15"
+version = "0.1.14"
 
 [[deps.LazyArtifacts]]
 deps = ["Artifacts", "Pkg"]
@@ -913,18 +941,26 @@ version = "0.3.1"
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
 uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
+version = "0.6.4"
 
 [[deps.LibCURL_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
 uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
+version = "8.4.0+0"
 
 [[deps.LibGit2]]
-deps = ["Base64", "NetworkOptions", "Printf", "SHA"]
+deps = ["Base64", "LibGit2_jll", "NetworkOptions", "Printf", "SHA"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
+
+[[deps.LibGit2_jll]]
+deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll"]
+uuid = "e37daf67-58a4-590a-8e99-b0245dd2ffc5"
+version = "1.6.4+0"
 
 [[deps.LibSSH2_jll]]
 deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
 uuid = "29816b5a-b9ab-546f-933c-edad1886dfa8"
+version = "1.11.0+1"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -936,23 +972,42 @@ uuid = "89763e89-9b03-5906-acba-b20f662cd828"
 version = "4.4.0+0"
 
 [[deps.LinearAlgebra]]
-deps = ["Libdl", "libblastrampoline_jll"]
+deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LogExpFunctions]]
-deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
+deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
 git-tree-sha1 = "7d6dd4e9212aebaeed356de34ccf262a3cd415aa"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
 version = "0.3.26"
+
+    [deps.LogExpFunctions.extensions]
+    LogExpFunctionsChainRulesCoreExt = "ChainRulesCore"
+    LogExpFunctionsChangesOfVariablesExt = "ChangesOfVariables"
+    LogExpFunctionsInverseFunctionsExt = "InverseFunctions"
+
+    [deps.LogExpFunctions.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    ChangesOfVariables = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
+    InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
 [[deps.LoopVectorization]]
-deps = ["ArrayInterface", "CPUSummary", "ChainRulesCore", "CloseOpenIntervals", "DocStringExtensions", "ForwardDiff", "HostCPUFeatures", "IfElse", "LayoutPointers", "LinearAlgebra", "OffsetArrays", "PolyesterWeave", "PrecompileTools", "SIMDTypes", "SLEEFPirates", "SpecialFunctions", "Static", "StaticArrayInterface", "ThreadingUtilities", "UnPack", "VectorizationBase"]
-git-tree-sha1 = "0f5648fbae0d015e3abe5867bca2b362f67a5894"
+deps = ["ArrayInterface", "ArrayInterfaceCore", "CPUSummary", "CloseOpenIntervals", "DocStringExtensions", "HostCPUFeatures", "IfElse", "LayoutPointers", "LinearAlgebra", "OffsetArrays", "PolyesterWeave", "PrecompileTools", "SIMDTypes", "SLEEFPirates", "Static", "StaticArrayInterface", "ThreadingUtilities", "UnPack", "VectorizationBase"]
+git-tree-sha1 = "c88a4afe1703d731b1c4fdf4e3c7e77e3b176ea2"
 uuid = "bdcacae8-1622-11e9-2a5c-532679323890"
-version = "0.12.166"
+version = "0.12.165"
+
+    [deps.LoopVectorization.extensions]
+    ForwardDiffExt = ["ChainRulesCore", "ForwardDiff"]
+    SpecialFunctionsExt = "SpecialFunctions"
+
+    [deps.LoopVectorization.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+    SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
@@ -965,12 +1020,6 @@ deps = ["Markdown", "Random"]
 git-tree-sha1 = "9ee1618cbf5240e6d4e0371d6f24065083f60c48"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.11"
-
-[[deps.MakieCore]]
-deps = ["Observables", "REPL"]
-git-tree-sha1 = "9b11acd07f21c4d035bd4156e789532e8ee2cc70"
-uuid = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
-version = "0.6.9"
 
 [[deps.ManualMemory]]
 git-tree-sha1 = "bcaef4fc7a0cfe2cba636d84cda54b5e4e4ca3cd"
@@ -989,6 +1038,7 @@ uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
+version = "2.28.2+1"
 
 [[deps.MetaGraphs]]
 deps = ["Graphs", "JLD2", "Random"]
@@ -1013,12 +1063,7 @@ version = "0.3.4"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-
-[[deps.MutableArithmetics]]
-deps = ["LinearAlgebra", "SparseArrays", "Test"]
-git-tree-sha1 = "6985021d02ab8c509c841bb8b2becd3145a7b490"
-uuid = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
-version = "1.3.3"
+version = "2023.1.10"
 
 [[deps.NaNMath]]
 deps = ["OpenLibm_jll"]
@@ -1040,11 +1085,7 @@ version = "1.1.1"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
-
-[[deps.Observables]]
-git-tree-sha1 = "7438a59546cf62428fc9d1bc94729146d37a7225"
-uuid = "510215fc-4207-5dde-b226-833fc4488ee2"
-version = "0.5.5"
+version = "1.2.0"
 
 [[deps.OffsetArrays]]
 deps = ["Adapt"]
@@ -1055,6 +1096,7 @@ version = "1.12.10"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
+version = "0.3.23+2"
 
 [[deps.OpenEXR]]
 deps = ["Colors", "FileIO", "OpenEXR_jll"]
@@ -1071,12 +1113,7 @@ version = "3.1.4+0"
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
-
-[[deps.OpenSpecFun_jll]]
-deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "13652491f6856acfd2db29360e1bbcd4565d04f1"
-uuid = "efe28fd5-8261-553b-a9e1-b2916fc3738e"
-version = "0.5.5+0"
+version = "0.8.1+2"
 
 [[deps.OrderedCollections]]
 git-tree-sha1 = "2e73fe17cac3c62ad1aebe70d44c963c3cfdc3e3"
@@ -1102,8 +1139,9 @@ uuid = "d96e819e-fc66-5662-9728-84c9c7592b0a"
 version = "0.12.3"
 
 [[deps.Pkg]]
-deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
+deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+version = "1.10.0"
 
 [[deps.PkgVersion]]
 deps = ["Pkg"]
@@ -1118,10 +1156,20 @@ uuid = "1d0040c9-8b98-4ee7-8388-3f51789ca0ad"
 version = "0.2.1"
 
 [[deps.Polynomials]]
-deps = ["ChainRulesCore", "LinearAlgebra", "MakieCore", "MutableArithmetics", "RecipesBase"]
+deps = ["LinearAlgebra", "RecipesBase"]
 git-tree-sha1 = "3aa2bb4982e575acd7583f01531f241af077b163"
 uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
 version = "3.2.13"
+
+    [deps.Polynomials.extensions]
+    PolynomialsChainRulesCoreExt = "ChainRulesCore"
+    PolynomialsMakieCoreExt = "MakieCore"
+    PolynomialsMutableArithmeticsExt = "MutableArithmetics"
+
+    [deps.Polynomials.weakdeps]
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
+    MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -1162,7 +1210,7 @@ deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [[deps.Random]]
-deps = ["SHA", "Serialization"]
+deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[deps.RangeArrays]]
@@ -1175,6 +1223,10 @@ deps = ["Requires"]
 git-tree-sha1 = "1342a47bf3260ee108163042310d26f2be5ec90b"
 uuid = "c84ed2f1-dad5-54f0-aa8e-dbefe2724439"
 version = "0.4.5"
+weakdeps = ["FixedPointNumbers"]
+
+    [deps.Ratios.extensions]
+    RatiosFixedPointNumbersExt = "FixedPointNumbers"
 
 [[deps.RealDot]]
 deps = ["LinearAlgebra"]
@@ -1207,12 +1259,13 @@ version = "1.3.0"
 
 [[deps.Rotations]]
 deps = ["LinearAlgebra", "Quaternions", "Random", "StaticArrays"]
-git-tree-sha1 = "792d8fd4ad770b6d517a13ebb8dadfcac79405b8"
+git-tree-sha1 = "0783924e4a332493f72490253ba4e668aeba1d73"
 uuid = "6038ab10-8711-5258-84ad-4b1120ba62dc"
-version = "1.6.1"
+version = "1.6.0"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
+version = "0.7.0"
 
 [[deps.SIMDTypes]]
 git-tree-sha1 = "330289636fb8107c5f32088d2741e9fd7a061a5c"
@@ -1221,9 +1274,9 @@ version = "0.1.0"
 
 [[deps.SLEEFPirates]]
 deps = ["IfElse", "Static", "VectorizationBase"]
-git-tree-sha1 = "3aac6d68c5e57449f5b9b865c9ba50ac2970c4cf"
+git-tree-sha1 = "4b8586aece42bee682399c4c4aee95446aa5cd19"
 uuid = "476501e8-09a2-5ece-8869-fb82de89a1fa"
-version = "0.6.42"
+version = "0.6.39"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
@@ -1250,6 +1303,12 @@ git-tree-sha1 = "2da10356e31327c7096832eb9cd86307a50b1eb6"
 uuid = "45858cf5-a6b0-47a3-bbea-62219f50df47"
 version = "0.1.3"
 
+[[deps.SnoopPrecompile]]
+deps = ["Preferences"]
+git-tree-sha1 = "e760a70afdcd461cf01a575947738d359234665c"
+uuid = "66db9d55-30c0-4569-8b51-7e840670fc0c"
+version = "1.0.3"
+
 [[deps.Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
@@ -1260,14 +1319,9 @@ uuid = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
 version = "1.2.0"
 
 [[deps.SparseArrays]]
-deps = ["LinearAlgebra", "Random"]
+deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-
-[[deps.SpecialFunctions]]
-deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
-git-tree-sha1 = "e2cfc4012a19088254b3950b85c3c1d8882d864d"
-uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "2.3.1"
+version = "1.10.0"
 
 [[deps.StackViews]]
 deps = ["OffsetArrays"]
@@ -1286,12 +1340,21 @@ deps = ["ArrayInterface", "Compat", "IfElse", "LinearAlgebra", "PrecompileTools"
 git-tree-sha1 = "03fec6800a986d191f64f5c0996b59ed526eda25"
 uuid = "0d7ed370-da01-4f52-bd93-41d350b8b718"
 version = "1.4.1"
+weakdeps = ["OffsetArrays", "StaticArrays"]
+
+    [deps.StaticArrayInterface.extensions]
+    StaticArrayInterfaceOffsetArraysExt = "OffsetArrays"
+    StaticArrayInterfaceStaticArraysExt = "StaticArrays"
 
 [[deps.StaticArrays]]
-deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
+deps = ["LinearAlgebra", "Random", "StaticArraysCore"]
 git-tree-sha1 = "0adf069a2a490c47273727e029371b31d44b72b2"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
 version = "1.6.5"
+weakdeps = ["Statistics"]
+
+    [deps.StaticArrays.extensions]
+    StaticArraysStatisticsExt = "Statistics"
 
 [[deps.StaticArraysCore]]
 git-tree-sha1 = "36b3d696ce6366023a0ea192b4cd442268995a0d"
@@ -1301,6 +1364,7 @@ version = "1.4.2"
 [[deps.Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+version = "1.10.0"
 
 [[deps.StatsAPI]]
 deps = ["LinearAlgebra"]
@@ -1318,23 +1382,26 @@ version = "0.34.2"
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
+[[deps.SuiteSparse_jll]]
+deps = ["Artifacts", "Libdl", "libblastrampoline_jll"]
+uuid = "bea87d4a-7f5b-5778-9afe-8cc45184846c"
+version = "7.2.1+1"
+
 [[deps.TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+version = "1.0.3"
 
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
+version = "1.10.0"
 
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "1feb45f88d133a655e001435632f019a9a1bcdb6"
 uuid = "62fd8b95-f654-4bbd-a8a5-9c27f68ccd50"
 version = "0.1.1"
-
-[[deps.Test]]
-deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
-uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[deps.ThreadingUtilities]]
 deps = ["ManualMemory"]
@@ -1355,10 +1422,16 @@ uuid = "06e1c1a7-607b-532d-9fad-de7d9aa2abac"
 version = "0.5.0"
 
 [[deps.TranscodingStreams]]
-deps = ["Random", "Test"]
-git-tree-sha1 = "1fbeaaca45801b4ba17c251dd8603ef24801dd84"
+git-tree-sha1 = "7c9196c8c83802d7b8ca7a6551a0236edd3bf731"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.10.2"
+version = "0.10.0"
+
+    [deps.TranscodingStreams.extensions]
+    TestExt = ["Test", "Random"]
+
+    [deps.TranscodingStreams.weakdeps]
+    Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+    Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -1387,6 +1460,7 @@ version = "0.5.5"
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
+version = "1.2.13+1"
 
 [[deps.Zstd_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1395,8 +1469,9 @@ uuid = "3161d3a3-bdf6-5164-811a-617609db77b4"
 version = "1.5.5+0"
 
 [[deps.libblastrampoline_jll]]
-deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
+deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
+version = "5.8.0+1"
 
 [[deps.libpng_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "Zlib_jll"]
@@ -1413,40 +1488,33 @@ version = "1.10.3+0"
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
+version = "1.52.0+1"
 
 [[deps.p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
+version = "17.4.0+2"
 """
 
 # ╔═╡ Cell order:
 # ╠═232f7092-7e35-11ee-3548-13d1e42085fa
-# ╟─4752cb3e-e050-4573-b030-8b8ddc0840ed
+# ╟─d1b53e3e-b2d6-467d-97fa-9b7733d1a658
 # ╠═1338eb76-a58a-42a7-a429-9b7cfc148164
+# ╟─b0dd0e30-d6c3-46b9-b250-733741c3658c
 # ╠═471848d0-0e1a-442d-b2dc-b68e5f0090cc
-# ╠═81f9e18f-8463-4e9d-ab10-ea0863415bdc
 # ╠═f065f737-0392-470e-aa5d-39353627dc11
-# ╠═f0f5ecc6-dd27-471c-abad-8f5df1b6ee95
 # ╟─5540d711-3295-442c-ba17-706ca1ed1848
 # ╠═4d96c454-fbfe-4500-80b4-97e8a9df671a
 # ╟─c8f89fe3-02df-45b3-a56d-2bb651b83901
+# ╟─83f8dffc-d52a-4b10-ad65-ad94c299ec4f
+# ╟─c5791856-404a-4d65-8a1c-bcd97a3e305e
+# ╠═abb822c7-4abf-4cdf-98dd-cc51e90282e1
 # ╠═6e32d7ab-ba46-4a4e-8ed1-a8f0d1a635e8
-# ╠═11938dac-e27e-416c-ad79-9def4010774b
-# ╠═36a57a80-3200-48a4-b406-5dce062d65d7
-# ╠═922ac8b2-5bb7-4520-aa5b-d8fe353fab3b
 # ╟─e198647a-508d-4691-ac23-de8e1e68a745
 # ╠═0da373e1-bddf-4fb4-b7fa-825fe0cc584c
-# ╠═5b28f474-5c99-4349-bf7c-306865779a89
-# ╠═3a3a875f-44ec-48c3-ae26-a1434252cd75
 # ╟─b44e45f0-6459-4835-8c99-0c8992555dd8
 # ╠═2867346e-3d11-4206-9363-f7568c9f7404
 # ╟─47906cab-9184-4af2-81c2-2951524c03ae
-# ╠═da798b8b-4e07-43b9-bd58-e3b79eb67360
-# ╠═6e1ba806-2e5d-4ede-b34d-e6fe1132b8d3
-# ╟─2ec07496-929c-4d7a-8b2e-773348232899
-# ╠═d3a2a4c0-7cc9-4b13-a3dd-21db8ce2b847
-# ╠═b3f15669-3a11-43a3-8033-0d720f07c8f1
-# ╠═00c55a70-1e10-4dcf-a937-20cb0afd77a2
-# ╠═b4236736-e0c8-44da-a450-fb27d6cbdbc8
+# ╠═3ca25098-b5e9-4196-8986-b09b14165aa2
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
